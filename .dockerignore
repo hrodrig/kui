@@ -1,0 +1,12 @@
+# Exclude everything by default; only what the Docker build needs is sent as context.
+# Builder: go.mod, go.sum, cmd/, internal/ (templ + static + Go sources).
+# Excludes docs, screenshots, scripts, CI, local data, and dev artifacts.
+
+*
+.*
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**

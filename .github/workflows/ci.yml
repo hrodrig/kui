@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.4"
+      - name: Install templ
+        run: go install github.com/a-h/templ/cmd/templ@v0.3.977
+      - run: make fmt-check
+      - run: make vet
+      - run: make gocyclo
+      - run: make check-mapstructure-pin
+      - run: make check-x-net-pin
+      - run: make check-x-crypto-pin
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.4"
+      - name: Install templ
+        run: go install github.com/a-h/templ/cmd/templ@v0.3.977
+      - run: go test -count=1 -race -coverprofile=coverage.out -covermode=atomic ./...
+      - uses: codecov/codecov-action@v5
+        with:
+          file: ./coverage.out
+          fail_ci_if_error: false

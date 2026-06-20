@@ -1,0 +1,24 @@
+# kui — local development (used by `make run`)
+# Do not use in production. Override via env: KUI_ADMIN_PASSWORD, KIKO_API_KEY, KIKO_URL
+
+listen: ":3000"
+log_level: info
+
+database:
+  path: ./data/kui.db
+
+kiko:
+  url: http://127.0.0.1:8080
+  api_key: local-dev-key
+
+session:
+  cookie_name: kui_session
+  ttl_hours: 168        # remember me: 7 days
+  short_ttl_hours: 8    # without remember me
+  secure: false
+
+default_locale: en
+
+admin:
+  email: admin@localhost
+  password: dev-admin

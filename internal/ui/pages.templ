@@ -1,0 +1,771 @@
+package ui
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/hrodrig/kui/internal/kikoclient"
+	"github.com/hrodrig/kui/internal/store"
+)
+
+templ headAssets(sh Shell, title string) {
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<title>{ title } · { sh.T("layout.title_suffix") }</title>
+	<script>
+		(function () {
+			var t = localStorage.getItem("kui-theme");
+			if (t === "light" || t === "dark") {
+				document.documentElement.setAttribute("data-theme", t);
+			}
+		})();
+	</script>
+	<link rel="preconnect" href="https://fonts.bunny.net"/>
+	<link href="https://fonts.bunny.net/css?family=inter:400,500,600|jetbrains-mono:400,500,600" rel="stylesheet"/>
+	<link rel="stylesheet" href="/static/css/kui.css"/>
+}
+
+templ jsI18n(sh Shell) {
+	<div id="kui-i18n" data-json={ sh.JSI18n } hidden></div>
+	<script>window.kuiI18n = JSON.parse(document.getElementById("kui-i18n").dataset.json || "{}");</script>
+}
+
+templ LocalePicker(sh Shell) {
+	if len(sh.Links) > 1 {
+		<nav class="locale-picker" aria-label={ sh.T("nav.language") }>
+			for _, link := range sh.Links {
+				if link.Active {
+					<span class="locale-link active" aria-current="true">{ link.Label }</span>
+				} else {
+					<a class="locale-link" href={ link.URL }>{ link.Label }</a>
+				}
+			}
+		</nav>
+	}
+}
+
+templ PasswordField(sh Shell, id, name, autocomplete string, required bool, minlength int) {
+	<div class="password-field">
+		<input
+			class="form-control"
+			id={ id }
+			name={ name }
+			type="password"
+			required?={ required }
+			if minlength > 0 {
+				minlength={ fmt.Sprintf("%d", minlength) }
+			}
+			autocomplete={ autocomplete }
+		/>
+		<button
+			type="button"
+			class="password-toggle"
+			data-password-toggle={ id }
+			aria-label={ sh.T("common.show_password") }
+			aria-pressed="false"
+		>
+			<svg class="icon-show" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+				<path d="M1 8s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4z"/>
+				<circle cx="8" cy="8" r="2"/>
+			</svg>
+			<svg class="icon-hide" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+				<path d="M2 2l12 12"/>
+				<path d="M6.2 6.2C5.5 6.8 5 7.6 4.6 8.4 3.6 10.2 3.6 11.8 3.6 11.8s1.4 2.2 4.4 3.2M9.8 9.8c.7-.6 1.2-1.4 1.6-2.2"/>
+				<path d="M11.4 5.6C10.2 5.2 9.1 5 8 5 5 5 2.6 7.4 1 8s1.4 2.2 4.4 3.2"/>
+			</svg>
+		</button>
+	</div>
+}
+
+templ ThemeToggle(sh Shell) {
+	<button
+		type="button"
+		class="btn btn-ghost btn-sm theme-toggle"
+		data-theme-toggle
+		aria-label={ sh.T("common.theme_light") }
+		aria-pressed="false"
+		title={ sh.T("common.theme_toggle") }
+	>
+		<svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+			<path d="M8 1.5a5.5 5.5 0 1 0 5.5 5.5A4.5 4.5 0 0 1 8 1.5z"/>
+		</svg>
+		<svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+			<circle cx="8" cy="8" r="2.5"/>
+			<path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/>
+		</svg>
+	</button>
+}
+
+templ VersionTags(sh Shell) {
+	if ShowVersionTags() {
+		<span class="version-tags">
+			if KikoVersionLabel() != "" {
+				<a class="version-tag" href={ KikoRepoURL } target="_blank" rel="noopener noreferrer" title={ sh.T("version.kiko_github") }>{ KikoVersionLabel() }</a>
+			}
+			if KUIVersionLabel() != "" {
+				<a class="version-tag" href={ KUIRepoURL } target="_blank" rel="noopener noreferrer" title={ sh.T("version.kui_github") }>{ KUIVersionLabel() }</a>
+			}
+		</span>
+	}
+}
+
+templ Layout(sh Shell, title string, user *store.User, active string) {
+	<!DOCTYPE html>
+	<html lang={ sh.Lang }>
+		<head>
+			@headAssets(sh, title)
+			@jsI18n(sh)
+		</head>
+		<body>
+			if user != nil {
+				<div class="grid-shell">
+					<header class="uplink-header">
+						<div class="uplink-left">
+							<a class="uplink-brand" href="/">
+								<span class="uplink-logo">k</span>
+								<span class="uplink-name">kui</span>
+							</a>
+							<nav class="uplink-nav">
+								<a class={ uplinkNavClass(active, "dashboard") } href="/">{ sh.T("nav.analytics") }</a>
+								if user.Role == store.RoleAdmin {
+									<a class={ uplinkNavClass(active, "users") } href="/users">{ sh.T("nav.users") }</a>
+								}
+								<a class={ uplinkNavClass(active, "security") } href="/account/2fa">{ sh.T("nav.security") }</a>
+							</nav>
+						</div>
+						<div class="uplink-right">
+							@LocalePicker(sh)
+							@ThemeToggle(sh)
+							@VersionTags(sh)
+							<span class="status-pill"><span class="status-dot"></span> { sh.T("nav.online") }</span>
+							<span class="uplink-user">{ user.Email }</span>
+							<form method="post" action="/logout">
+								<button type="submit" class="btn btn-ghost btn-sm">{ sh.T("nav.sign_out") }</button>
+							</form>
+						</div>
+					</header>
+					<main class="grid-main">
+						{ children... }
+					</main>
+				</div>
+			} else {
+				{ children... }
+			}
+			<script src="/static/js/htmx.min.js"></script>
+			<script src="/static/js/kui.js"></script>
+		</body>
+	</html>
+}
+
+func uplinkNavClass(active, item string) string {
+	if active == item {
+		return "uplink-link active"
+	}
+	return "uplink-link"
+}
+
+type LoginFormData struct {
+	Shell    Shell
+	Error    string
+	Email    string
+	Remember bool
+}
+
+templ LoginPage(form LoginFormData) {
+	@Layout(form.Shell, form.Shell.T("login.title"), nil, "") {
+		<div class="login-page">
+			<div class="login-card hud-panel">
+				<div class="page-eyebrow">{ form.Shell.T("common.access") }</div>
+				<h1>{ form.Shell.T("login.title") }</h1>
+				<p class="subtitle">{ form.Shell.T("login.subtitle") } <a href="https://github.com/hrodrig/kiko">kiko</a></p>
+				if form.Error != "" {
+					<div class="alert alert-danger" role="alert">{ form.Error }</div>
+				}
+				<form method="post" action="/login">
+					<div class="form-group">
+						<label class="form-label" for="email">{ form.Shell.T("common.email") }</label>
+						<input class="form-control" id="email" name="email" type="text" inputmode="email" value={ form.Email } required pattern={ emailInputPattern() } title={ form.Shell.T("login.email_title") } autocomplete="username"/>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="password">{ form.Shell.T("common.password") }</label>
+						@PasswordField(form.Shell, "password", "password", "current-password", true, 0)
+					</div>
+					<div class="form-group">
+						<label class="form-check">
+							<input class="form-check-input" type="checkbox" name="remember" value="1" checked?={ form.Remember }/>
+							<span class="form-check-label">{ form.Shell.T("login.remember") }</span>
+						</label>
+					</div>
+					<button class="btn btn-primary w-full" type="submit">{ form.Shell.T("login.submit") }</button>
+				</form>
+			</div>
+			<div class="login-versions">
+				@LocalePicker(form.Shell)
+				@ThemeToggle(form.Shell)
+				@VersionTags(form.Shell)
+			</div>
+		</div>
+	}
+}
+
+templ Login2FAPage(sh Shell, errorMsg string) {
+	@Layout(sh, sh.T("login2fa.title"), nil, "") {
+		<div class="login-page">
+			<div class="login-card hud-panel">
+				<div class="page-eyebrow">{ sh.T("common.access") }</div>
+				<h1>{ sh.T("login2fa.title") }</h1>
+				<p class="subtitle">{ sh.T("login2fa.subtitle") }</p>
+				if errorMsg != "" {
+					<div class="alert alert-danger" role="alert">{ errorMsg }</div>
+				}
+				<form method="post" action="/login/2fa">
+					<div class="form-group">
+						<label class="form-label" for="code">{ sh.T("common.code") }</label>
+						<input class="form-control mono" id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus/>
+					</div>
+					<button class="btn btn-primary w-full" type="submit">{ sh.T("login2fa.submit") }</button>
+				</form>
+				<p class="form-hint" style="margin-top:1rem"><a href="/login">{ sh.T("login2fa.back") }</a></p>
+			</div>
+			<div class="login-versions">
+				@LocalePicker(sh)
+				@ThemeToggle(sh)
+				@VersionTags(sh)
+			</div>
+		</div>
+	}
+}
+
+type Account2FAData struct {
+	Shell        Shell
+	Enabled      bool
+	SetupPending bool
+	QRDataURI    string
+	ManualSecret string
+	Error        string
+}
+
+templ Account2FAPage(user *store.User, data Account2FAData) {
+	@Layout(data.Shell, data.Shell.T("twofa.page_title"), user, "security") {
+		<div class="analytics-page form-page">
+			<div class="analytics-toolbar">
+				<div>
+					<div class="page-eyebrow">{ data.Shell.T("account.eyebrow") }</div>
+					<h1 class="page-title">{ data.Shell.T("twofa.page_title") }</h1>
+					<p class="page-desc">{ data.Shell.T("twofa.page_desc") }</p>
+				</div>
+			</div>
+			if data.Error != "" {
+				<div class="alert alert-danger">{ data.Error }</div>
+			}
+			<div class="hud-panel">
+				<div class="panel-body">
+					if data.Enabled {
+						<p class="modal-message">{ data.Shell.T("twofa.enabled_msg") }</p>
+						<form method="post" action="/account/2fa/disable" class="twofa-disable-form">
+							<div class="form-group">
+								<label class="form-label" for="code">{ data.Shell.T("twofa.disable_code") }</label>
+								<input class="form-control mono" id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required/>
+							</div>
+							<button class="btn btn-danger-ghost" type="submit">{ data.Shell.T("twofa.disable_btn") }</button>
+						</form>
+					} else if data.SetupPending {
+						<p class="modal-message">{ data.Shell.T("twofa.scan_msg") }</p>
+						if data.QRDataURI != "" {
+							<img class="qr-image" src={ data.QRDataURI } alt={ data.Shell.T("twofa.qr_alt") } width="200" height="200"/>
+						}
+						<p class="form-hint">{ data.Shell.T("twofa.manual_secret") }</p>
+						<p class="secret-mono">{ data.ManualSecret }</p>
+						<form method="post" action="/account/2fa/confirm">
+							<div class="form-group">
+								<label class="form-label" for="confirm-code">{ data.Shell.T("twofa.verify_code") }</label>
+								<input class="form-control mono" id="confirm-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus/>
+							</div>
+							<div class="btn-group">
+								<button class="btn btn-primary" type="submit">{ data.Shell.T("twofa.enable_btn") }</button>
+								<a class="btn btn-ghost" href="/account/2fa/cancel">{ data.Shell.T("twofa.cancel_setup") }</a>
+							</div>
+						</form>
+					} else {
+						<p class="modal-message">{ data.Shell.T("twofa.disabled_msg") }</p>
+						<form method="post" action="/account/2fa/begin">
+							<button class="btn btn-primary" type="submit">{ data.Shell.T("twofa.enable_start") }</button>
+						</form>
+					}
+				</div>
+			</div>
+		</div>
+	}
+}
+
+type DashboardSummary struct {
+	Hits        int64
+	Uniques     int64
+	TopPath     string
+	TopPathHits int64
+	Since       string
+	Until       string
+}
+
+type DashboardData struct {
+	Shell    Shell
+	Hosts    []string
+	Host     string
+	Range    string
+	Summary  *DashboardSummary
+	Timeline []kikoclient.TimelinePoint
+	Paths    []kikoclient.PathRow
+	Refs     []kikoclient.RefRow
+	Channels []kikoclient.Row
+	ChartJSON string
+	KikoErr  string
+}
+
+templ DashboardPage(user *store.User, data DashboardData) {
+	@Layout(data.Shell, data.Shell.T("nav.analytics"), user, "dashboard") {
+		<div class="analytics-page">
+			<div class="analytics-toolbar">
+				<div>
+					<div class="page-eyebrow">{ data.Shell.T("dashboard.eyebrow") }</div>
+					<h1 class="page-title">{ data.Shell.T("dashboard.title") }</h1>
+				</div>
+				<form class="toolbar-filters" method="get" action="/">
+					if len(data.Hosts) > 0 {
+						<div class="filter-field">
+							<label class="form-label" for="host">{ data.Shell.T("dashboard.site") }</label>
+							<select class="form-select" id="host" name="host">
+								for _, h := range data.Hosts {
+									<option value={ h } selected?={ h == data.Host }>{ h }</option>
+								}
+							</select>
+						</div>
+					}
+					<div class="filter-field">
+						<label class="form-label" for="range">{ data.Shell.T("dashboard.range") }</label>
+						<select class="form-select" id="range" name="range">
+							<option value="7d" selected?={ data.Range == "7d" }>{ data.Shell.T("dashboard.range_7d") }</option>
+							<option value="30d" selected?={ data.Range == "30d" }>{ data.Shell.T("dashboard.range_30d") }</option>
+							<option value="90d" selected?={ data.Range == "90d" }>{ data.Shell.T("dashboard.range_90d") }</option>
+						</select>
+					</div>
+					<button class="btn btn-primary btn-sm" type="submit">{ data.Shell.T("common.apply") }</button>
+				</form>
+			</div>
+			if data.KikoErr != "" {
+				<div class="alert alert-warning">{ data.KikoErr }</div>
+			}
+			if data.Summary != nil {
+				<div class="kpi-grid">
+					@KpiCard(data.Shell.T("dashboard.kpi_page_views"), formatInt(data.Summary.Hits), data.Shell.T("dashboard.tag_data_stream"))
+					@KpiCard(data.Shell.T("dashboard.kpi_uniques"), formatInt(data.Summary.Uniques), data.Shell.T("dashboard.tag_identity"))
+					@KpiCard(data.Shell.T("dashboard.kpi_pages_visit"), pagesPerVisit(data.Summary.Hits, data.Summary.Uniques), data.Shell.T("dashboard.tag_ratio"))
+					@KpiCard(data.Shell.T("dashboard.kpi_top_path_views"), formatInt(data.Summary.TopPathHits), data.Shell.T("dashboard.tag_top_path"))
+					@KpiCard(data.Shell.T("dashboard.kpi_top_path"), truncatePath(data.Summary.TopPath), data.Shell.T("dashboard.tag_path"))
+				</div>
+				<p class="range-meta">{ rangeMeta(data.Shell, data.Summary.Since, data.Summary.Until) }</p>
+				<div class="tab-bar" role="tablist">
+					<button class="tab-btn active" type="button" data-tab="overview" role="tab">{ data.Shell.T("dashboard.tab_overview") }</button>
+					<button class="tab-btn" type="button" data-tab="paths" role="tab">{ data.Shell.T("dashboard.tab_paths") }</button>
+					<button class="tab-btn" type="button" data-tab="sources" role="tab">{ data.Shell.T("dashboard.tab_sources") }</button>
+				</div>
+				<div class="tab-panel active" data-panel="overview">
+					<div class="chart-grid">
+						<div class="hud-panel chart-panel">
+							<div class="panel-head">
+								<span class="panel-label">{ data.Shell.T("dashboard.timeline") }</span>
+								<span class="panel-tag">{ data.Shell.T("dashboard.tag_timeline") }</span>
+							</div>
+							<div class="chart-wrap">
+								<canvas id="chart-timeline"></canvas>
+							</div>
+						</div>
+						<div class="hud-panel chart-panel">
+							<div class="panel-head">
+								<span class="panel-label">{ data.Shell.T("dashboard.channels") }</span>
+								<span class="panel-tag">{ data.Shell.T("dashboard.tag_breakdown") }</span>
+							</div>
+							<div class="chart-wrap chart-wrap-sm">
+								<canvas id="chart-channels"></canvas>
+							</div>
+						</div>
+					</div>
+					<div class="table-grid">
+						@PathsTable(data.Shell, data.Paths)
+						@RefsTable(data.Shell, data.Refs)
+					</div>
+				</div>
+				<div class="tab-panel" data-panel="paths">
+					@PathsTable(data.Shell, data.Paths)
+				</div>
+				<div class="tab-panel" data-panel="sources">
+					<div class="table-grid">
+						@RefsTable(data.Shell, data.Refs)
+						@ChannelsTable(data.Shell, data.Channels)
+					</div>
+				</div>
+				@DashboardCharts(data)
+			} else if data.KikoErr == "" {
+				<div class="alert alert-info hud-panel">{ data.Shell.T("dashboard.no_stats") }</div>
+			}
+		</div>
+	}
+}
+
+templ DashboardCharts(data DashboardData) {
+	<div id="dashboard-config" data-json={ data.ChartJSON } hidden></div>
+	<script src="/static/js/chart.umd.min.js"></script>
+	<script src="/static/js/dashboard.js"></script>
+}
+
+func truncatePath(p string) string {
+	if p == "" {
+		return "—"
+	}
+	if len(p) > 28 {
+		return p[:25] + "..."
+	}
+	return p
+}
+
+templ KpiCard(label, value, tag string) {
+	<div class="kpi-card hud-panel">
+		<div class="kpi-tag">{ tag }</div>
+		<div class="kpi-label">{ label }</div>
+		<div class="kpi-value">{ value }</div>
+	</div>
+}
+
+templ PathsTable(sh Shell, paths []kikoclient.PathRow) {
+	<div class="hud-panel table-panel">
+		<div class="panel-head">
+			<span class="panel-label">{ sh.T("dashboard.top_paths") }</span>
+			<span class="panel-tag">{ sh.T("dashboard.tag_paths") }</span>
+		</div>
+		<div class="table-wrap">
+			if len(paths) == 0 {
+				<p class="empty-row">{ sh.T("dashboard.empty_paths") }</p>
+			} else {
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>{ sh.T("dashboard.col_path") }</th>
+							<th class="text-end">{ sh.T("dashboard.col_views") }</th>
+							<th class="text-end">{ sh.T("dashboard.col_uniques") }</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, p := range paths {
+							<tr>
+								<td class="mono-cell">{ pathLabel(p) }</td>
+								<td class="text-end">{ formatInt(p.Hits) }</td>
+								<td class="text-end text-muted">{ formatInt(p.Uniques) }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+	</div>
+}
+
+templ RefsTable(sh Shell, refs []kikoclient.RefRow) {
+	<div class="hud-panel table-panel">
+		<div class="panel-head">
+			<span class="panel-label">{ sh.T("dashboard.top_refs") }</span>
+			<span class="panel-tag">{ sh.T("dashboard.tag_refs") }</span>
+		</div>
+		<div class="table-wrap">
+			if len(refs) == 0 {
+				<p class="empty-row">{ sh.T("dashboard.empty_refs") }</p>
+			} else {
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>{ sh.T("dashboard.col_source") }</th>
+							<th class="text-end">{ sh.T("dashboard.col_views") }</th>
+							<th class="text-end">{ sh.T("dashboard.col_uniques") }</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, ref := range refs {
+							<tr>
+								<td>{ refLabel(sh, ref) }</td>
+								<td class="text-end">{ formatInt(ref.Hits) }</td>
+								<td class="text-end text-muted">{ formatInt(ref.Uniques) }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+	</div>
+}
+
+templ ChannelsTable(sh Shell, channels []kikoclient.Row) {
+	<div class="hud-panel table-panel">
+		<div class="panel-head">
+			<span class="panel-label">{ sh.T("dashboard.channels_table") }</span>
+			<span class="panel-tag">{ sh.T("dashboard.tag_channel") }</span>
+		</div>
+		<div class="table-wrap">
+			if len(channels) == 0 {
+				<p class="empty-row">{ sh.T("dashboard.empty_channels") }</p>
+			} else {
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>{ sh.T("dashboard.col_channel") }</th>
+							<th class="text-end">{ sh.T("dashboard.col_views") }</th>
+							<th class="text-end">{ sh.T("dashboard.col_uniques") }</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, ch := range channels {
+							<tr>
+								<td>{ channelLabel(sh, ch.Label) }</td>
+								<td class="text-end">{ formatInt(ch.Hits) }</td>
+								<td class="text-end text-muted">{ formatInt(ch.Uniques) }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+	</div>
+}
+
+templ UsersPage(sh Shell, user *store.User, users []store.UserWithHosts, flash string) {
+	@Layout(sh, sh.T("users.title"), user, "users") {
+		<div class="analytics-page">
+			<div class="analytics-toolbar">
+				<div>
+					<div class="page-eyebrow">{ sh.T("users.eyebrow") }</div>
+					<h1 class="page-title">{ sh.T("users.title") }</h1>
+					<p class="page-desc">{ sh.T("users.desc") }</p>
+				</div>
+				<a class="btn btn-primary" href="/users/new">{ sh.T("users.new") }</a>
+			</div>
+			if flash != "" {
+				<div class="alert alert-warning">{ flash }</div>
+			}
+			<div class="hud-panel table-panel">
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>{ sh.T("users.col_email") }</th>
+								<th>{ sh.T("users.col_role") }</th>
+								<th>{ sh.T("users.col_2fa") }</th>
+								<th>{ sh.T("users.col_hosts") }</th>
+								<th>{ sh.T("users.col_created") }</th>
+								<th class="text-end">{ sh.T("users.col_actions") }</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, u := range users {
+								<tr>
+									<td>{ u.Email }</td>
+									<td>
+										if u.Role == store.RoleAdmin {
+											<span class="badge badge-admin">{ sh.T("common.admin") }</span>
+										} else {
+											<span class="badge badge-user">{ sh.T("common.user") }</span>
+										}
+									</td>
+									<td>
+										if u.TOTPEnabled {
+											<span class="badge badge-2fa-on">{ sh.T("common.on") }</span>
+										} else {
+											<span class="badge badge-2fa-off">{ sh.T("common.off") }</span>
+										}
+									</td>
+									<td class="text-muted">
+										if u.Role == store.RoleAdmin {
+											<em>{ sh.T("common.all_sites") }</em>
+										} else if len(u.Hosts) > 0 {
+											{ strings.Join(u.Hosts, ", ") }
+										} else {
+											<em>{ sh.T("common.none") }</em>
+										}
+									</td>
+									<td class="text-muted">{ u.CreatedAt.Format("2006-01-02") }</td>
+									<td class="text-end text-nowrap">
+										<a class="btn btn-ghost btn-sm" href={ userEditURL(u.ID) }>{ sh.T("common.edit") }</a>
+										if user != nil && u.ID != user.ID {
+											<button
+												type="button"
+												class="btn btn-danger-ghost btn-sm"
+												data-confirm-open
+												data-confirm-action={ userDeleteURL(u.ID) }
+												data-confirm-title={ sh.T("users.delete_title") }
+												data-confirm-body={ deleteUserBody(sh, u.Email) }
+											>{ sh.T("common.delete") }</button>
+										}
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			@ConfirmModal(sh)
+		</div>
+	}
+}
+
+templ ConfirmModal(sh Shell) {
+	<div id="confirm-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="confirm-modal-title">
+		<div class="modal-backdrop" data-confirm-cancel></div>
+		<div class="modal-dialog hud-panel">
+			<div class="panel-head">
+				<span class="panel-label" id="confirm-modal-title" data-confirm-title>{ sh.T("common.confirm") }</span>
+				<span class="panel-tag">{ sh.T("common.action") }</span>
+			</div>
+			<div class="modal-body">
+				<p class="modal-message" data-confirm-body></p>
+			</div>
+			<div class="modal-actions">
+				<button type="button" class="btn btn-ghost" data-confirm-cancel>{ sh.T("common.cancel") }</button>
+				<form id="confirm-form" method="post" action="">
+					<button type="submit" class="btn btn-danger-ghost" data-confirm-submit>{ sh.T("common.delete") }</button>
+				</form>
+			</div>
+		</div>
+	</div>
+}
+
+type UserFormData struct {
+	Shell       Shell
+	ID          int64
+	Email       string
+	Password    string
+	Role        store.Role
+	HostsText   string
+	Error       string
+	Success     string
+	TOTPEnabled bool
+	IsNew       bool
+}
+
+templ UserFormPage(user *store.User, form UserFormData) {
+	@Layout(form.Shell, formTitle(form.Shell, form), user, "users") {
+		<div class="analytics-page form-page">
+			<div class="analytics-toolbar">
+				<div>
+					<div class="page-eyebrow">{ form.Shell.T("users.eyebrow") }</div>
+					<h1 class="page-title">{ formTitle(form.Shell, form) }</h1>
+				</div>
+			</div>
+			<div class="hud-panel">
+				<div class="panel-body">
+					if form.Success != "" {
+						<div class="alert alert-success">{ form.Success }</div>
+					}
+					if form.Error != "" {
+						<div class="alert alert-danger">{ form.Error }</div>
+					}
+					<form method="post" action={ formAction(form) }>
+						if form.IsNew {
+							<div class="form-group">
+								<label class="form-label" for="email">{ form.Shell.T("common.email") }</label>
+								<input class="form-control" id="email" name="email" type="text" inputmode="email" value={ form.Email } required pattern={ emailInputPattern() } title={ form.Shell.T("login.email_title") } autocomplete="username"/>
+							</div>
+						} else {
+							<div class="form-group">
+								<label class="form-label">{ form.Shell.T("common.email") }</label>
+								<p class="form-plaintext">{ form.Email }</p>
+							</div>
+						}
+						<div class="form-group">
+							<label class="form-label" for="password">
+								if form.IsNew {
+									{ form.Shell.T("common.password") }
+								} else {
+									{ form.Shell.T("common.password") } <span class="form-hint" style="display:inline">{ form.Shell.T("form.password_new_hint") }</span>
+								}
+							</label>
+							@PasswordField(form.Shell, "password", "password", passwordAutocomplete(form), form.IsNew, 8)
+							<div class="form-hint">{ form.Shell.T("form.password_hint") }</div>
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="role">{ form.Shell.T("form.role") }</label>
+							<select class="form-select" id="role" name="role" required>
+								<option value="user" selected?={ form.Role == store.RoleUser }>{ form.Shell.T("form.role_user") }</option>
+								<option value="admin" selected?={ form.Role == store.RoleAdmin }>{ form.Shell.T("form.role_admin") }</option>
+							</select>
+						</div>
+						<div class="form-group" id="hosts-field">
+							<label class="form-label" for="hosts">{ form.Shell.T("form.hosts") }</label>
+							<textarea class="form-control mono" id="hosts" name="hosts" rows="4" placeholder="gghstats.com&#10;kzero.dev">{ form.HostsText }</textarea>
+							<div class="form-hint">{ form.Shell.T("form.hosts_hint") }</div>
+						</div>
+						if !form.IsNew && user != nil && user.ID != form.ID {
+							<div class="form-group">
+								<label class="form-label">{ form.Shell.T("users.twofa_label") }</label>
+								if form.TOTPEnabled {
+									<p class="form-plaintext">
+										<span class="badge badge-2fa-on">{ form.Shell.T("common.enabled") }</span>
+										<span class="form-hint" style="display:inline;margin-left:0.5rem">{ form.Shell.T("users.twofa_enabled_hint") }</span>
+									</p>
+									<button
+										type="button"
+										class="btn btn-danger-ghost btn-sm"
+										data-confirm-open
+										data-confirm-action={ user2FAResetURL(form.ID) }
+										data-confirm-title={ form.Shell.T("users.reset_2fa_title") }
+										data-confirm-submit={ form.Shell.T("users.reset_2fa_btn") }
+										data-confirm-body={ reset2FABody(form.Shell, form.Email) }
+									>{ form.Shell.T("users.reset_2fa_btn") }</button>
+								} else {
+									<p class="form-plaintext">
+										<span class="badge badge-2fa-off">{ form.Shell.T("common.off") }</span>
+										<span class="form-hint" style="display:inline;margin-left:0.5rem">{ form.Shell.T("users.twofa_off_hint") }</span>
+									</p>
+								}
+							</div>
+						}
+					<div class="btn-group">
+						<button class="btn btn-primary" type="submit">
+							if form.IsNew {
+								{ form.Shell.T("form.create_user") }
+							} else {
+								{ form.Shell.T("form.save_changes") }
+							}
+						</button>
+						<a class="btn btn-ghost" href="/users">{ form.Shell.T("common.cancel") }</a>
+						if !form.IsNew && user != nil && user.ID == form.ID {
+							<a class="btn btn-ghost" href="/account/2fa">{ form.Shell.T("twofa.settings") }</a>
+						}
+					</div>
+					</form>
+				</div>
+			</div>
+			if !form.IsNew && user != nil && user.ID != form.ID {
+				@ConfirmModal(form.Shell)
+			}
+		</div>
+	}
+}
+
+func formAction(form UserFormData) string {
+	if form.IsNew {
+		return "/users"
+	}
+	return fmt.Sprintf("/users/%d", form.ID)
+}
+
+func userEditURL(id int64) string {
+	return fmt.Sprintf("/users/%d", id)
+}
+
+func userDeleteURL(id int64) string {
+	return fmt.Sprintf("/users/%d/delete", id)
+}
+
+func user2FAResetURL(id int64) string {
+	return fmt.Sprintf("/users/%d/2fa/reset", id)
+}
+
+func passwordAutocomplete(form UserFormData) string {
+	return "new-password"
+}

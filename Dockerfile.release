@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+# Runtime image for GoReleaser dockers_v2: binaries are built by GoReleaser and laid out as
+# linux/<arch>/kui in the build context (see https://goreleaser.com/customization/dockers_v2/).
+ARG TARGETPLATFORM
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG TARGETPLATFORM
+WORKDIR /app
+LABEL org.opencontainers.image.title="kui"
+LABEL org.opencontainers.image.description="Analytics dashboard for kiko"
+LABEL org.opencontainers.image.source="https://github.com/hrodrig/kui"
+LABEL org.opencontainers.image.authors="https://github.com/hrodrig/kui"
+COPY ${TARGETPLATFORM}/kui /app/kui
+USER nonroot:nonroot
+EXPOSE 3000
+ENTRYPOINT ["/app/kui"]
+CMD ["serve"]
