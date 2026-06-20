@@ -132,17 +132,17 @@ make vendor-static # re-download Bootstrap, HTMX, Chart.js
 **Local / CI** (full build from source):
 
 ```bash
-docker build -f Dockerfile -t ghcr.io/hrodrig/kui:v0.1.0 \
-  --build-arg VERSION=0.1.0 .
+docker build -f Dockerfile -t ghcr.io/hrodrig/kui:v0.2.0 \
+  --build-arg VERSION=0.2.0 .
 docker run --rm -p 3000:3000 \
   -e KUI_ADMIN_PASSWORD=change-me \
   -e KIKO_URL=http://host.docker.internal:8080 \
   -e KIKO_API_KEY=your-key \
   -v kui-data:/data \
-  ghcr.io/hrodrig/kui:v0.1.0
+  ghcr.io/hrodrig/kui:v0.2.0
 ```
 
-**Release** images use `Dockerfile.release` with a pre-built binary (GoReleaser `dockers_v2` → `ghcr.io/hrodrig/kui:v0.1.0`).
+**Release** images use `Dockerfile.release` with a pre-built binary (GoReleaser `dockers_v2` → `ghcr.io/hrodrig/kui:v0.2.0`).
 
 ## Release
 
