@@ -1,0 +1,5 @@
+# This file is in the repo root.
+# Each owner line is a glob pattern followed by one or more @user or @org/team.
+# See https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @hrodrig

@@ -16,6 +16,14 @@ import (
 )
 
 func Execute() int {
+	root := newRootCmd()
+	if err := root.Execute(); err != nil {
+		return 1
+	}
+	return 0
+}
+
+func newRootCmd() *cobra.Command {
 	var cfgFile string
 
 	root := &cobra.Command{
@@ -44,10 +52,7 @@ func Execute() int {
 	}
 	root.AddCommand(versionCmd)
 
-	if err := root.Execute(); err != nil {
-		return 1
-	}
-	return 0
+	return root
 }
 
 func serveCmd(cfgFile string) error {
