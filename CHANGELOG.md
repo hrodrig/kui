@@ -6,6 +6,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-20
+
+### Added
+
+- **Test coverage** — auth 82%, store 87%, i18n 91%, kikoclient 86%, config 96%, version 100%.
+  `make cover-check` gates at ≥ 80 % with `COVERAGE_MIN=80`.
+- **Security workflows** — standalone `security.yml` (govulncheck + grype on Docker image),
+  `codeql.yml` (CodeQL static analysis), and `codecov.yml` (informational uploads).
+- **Dependency pins** — explicit `golang.org/x/net@v0.55.0`, `golang.org/x/crypto@v0.52.0`,
+  `go-viper/mapstructure/v2@v2.4.0`, enforced by Makefile guards and GoReleaser hooks.
+- **`gocyclo` rule** — cyclomatic complexity ≤ 14 (excludes `*_templ.go`).
+- **`Dockerfile.release`** — distroless runtime image for GoReleaser.
+- **`.dockerignore`** — allowlist build context (go.mod, go.sum, cmd/, internal/ only).
+- **`.cursor/rules/`** — dedicated rules for gocyclo, coverage, security, release-tests.
+- **`CODE_OF_CONDUCT.md`** — Contributor Covenant v2.1.
+- **`codecov.yml`** and `SECURITY.md` — project health documentation.
+
+### Changed
+
+- **Makefile** — split `COVER_PKGS` (gate) from `TEST_PKGS` (all). New targets:
+  `cover-check`, `gocyclo`, `govulncheck`, `grype`, `security`, `tools`, `docker-*`.
+  `release-check` gates all quality checks.
+- **README badges** — point CI, Security, CodeQL, Codecov to live workflows.
+- **Refactored** `getDashboard` → `fillDashboardKiko` helper to reduce cyclomatic complexity.
+- **`.gitignore`** — allowlist for project assets; deny `*.db`, `data/*.db`, `coverage.out`.
+
 ## [0.2.0] - 2026-06-20
 
 ### Added

@@ -38,7 +38,6 @@
 /kui
 /kui.exe
 /dist/
-coverage.out
 *.db
 data/*.db
 *.db-shm

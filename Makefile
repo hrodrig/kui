@@ -1,14 +1,21 @@
 BINARY      := kui
 MODULE      := github.com/hrodrig/kui
 DIST        := dist
+# Packages with a meaningful coverage gate (pure logic, testable without infra).
+# Exclude: scripts/ (non-app), cmd/kui (entrypoint), internal/server (DB+HTTP infra),
+# internal/cli (cobra integration), internal/ui (templ templates), internal/log (thin wrapper).
+COVER_PKGS  := $(shell go list ./... | grep -v -E '/(scripts/|cmd/kui|internal/server|internal/cli|internal/ui|internal/log)')
+# All packages except scripts/ (for test runner).
+TEST_PKGS   := $(shell go list ./... | grep -v -E '/(scripts/|cmd/kui|internal/ui|internal/log)')
 VERSION_RAW ?= $(shell cat VERSION 2>/dev/null | tr -d '\n\r')
 VERSION     := $(patsubst v%,%,$(VERSION_RAW))
 TAG         := v$(VERSION)
 COMMIT      := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILDDATE   := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BRANCH      := $(shell git symbolic-ref --short HEAD 2>/dev/null || echo unknown)
-
-COVERAGE_MIN  ?= 4
+# Fails early when Docker is required but not running.
+check-docker = @docker info >/dev/null 2>&1 || { echo "Error: Docker is not running. Start Docker and try again."; exit 1; }
+COVERAGE_MIN  ?= 80
 GRYPE_FAIL_ON ?= high
 
 # Minimum golang.org/x/net (explicit go.mod pin; go mod tidy drops it → templ/afero resolve older).
@@ -62,10 +69,10 @@ install: generate ## Install to $$GOBIN
 	go install -trimpath -ldflags "$(LDFLAGS)" ./cmd/$(BINARY)
 
 test: generate ## Run tests with race detector
-	go test -count=1 -race ./...
+	go test -count=1 -race $(TEST_PKGS)
 
-cover: generate ## Run tests + coverage report
-	go test -count=1 -race -coverprofile=coverage.out -covermode=atomic ./...
+cover: generate ## Run tests + coverage report (COVER_PKGS gate)
+	go test -count=1 -race -coverprofile=coverage.out -covermode=atomic $(COVER_PKGS)
 	@go tool cover -func=coverage.out | tail -1
 
 cover-check: cover ## Run tests + coverage gate
@@ -148,19 +155,29 @@ grype: ## Directory CVE scan
 		echo "grype not installed, skipping"; \
 	fi
 
-security: govulncheck gocyclo grype ## Run all security checks
+security: govulncheck gocyclo ## Run all security checks (grype only via docker-scan; dir scan has module cache noise)
 
 tools: ## Install security tooling
 	go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 
 docker-build: ## Build Docker image (local)
-	@DOCKER_BUILDKIT=1 docker build \
+	$(check-docker)
+	@set -e; \
+	opts=""; \
+	if [ -n "$(strip $(DOCKER_PLATFORM))" ]; then opts="--platform $(DOCKER_PLATFORM)"; fi; \
+	DOCKER_BUILDKIT=1 docker build $$opts \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg BUILDDATE=$(BUILDDATE) \
 		--build-arg BRANCH=$(BRANCH) \
 		-t $(BINARY):local .
+
+docker-build-amd64:
+	$(MAKE) docker-build DOCKER_PLATFORM=linux/amd64
+
+docker-build-arm64:
+	$(MAKE) docker-build DOCKER_PLATFORM=linux/arm64
 
 docker-buildx: ## Build multi-arch Docker image
 	@docker buildx build \
@@ -172,8 +189,12 @@ docker-buildx: ## Build multi-arch Docker image
 		-t $(BINARY):local .
 
 docker-scan: docker-build ## Build + Grype image scan
-	@which grype >/dev/null 2>&1 || (echo "grype not installed, skipping scan"; exit 0)
-	grype --fail-on $(GRYPE_FAIL_ON) $(BINARY):local
+	@if command -v grype >/dev/null 2>&1; then \
+		grype $(BINARY):local --fail-on $(GRYPE_FAIL_ON) ; \
+	else \
+		echo "grype not found locally, using container image..."; \
+		docker run --rm --pull=always -v /var/run/docker.sock:/var/run/docker.sock anchore/grype:latest $(BINARY):local --fail-on $(GRYPE_FAIL_ON) ; \
+	fi
 
 run: build ## Build and run locally (needs kiko on :8080 with same KIKO_API_KEY)
 	@mkdir -p data
@@ -197,7 +218,7 @@ seed-kiko: ## Inject sample hits into local kiko (override: KIKO_SEED_HOSTS=host
 seed-kiko-history: ## Backfill 90 days of demo hits in kiko SQLite (for README screenshots)
 	@go run ./scripts/seed-kiko-history -reset -days $${SEED_DAYS:-90} -db $${KIKO_DB:-../kiko/data/kiko.db}
 
-release-check: semver-check check-mapstructure-pin check-x-net-pin check-x-crypto-pin fmt-check vet cover-check security ## Release gate: all quality checks
+release-check: semver-check check-mapstructure-pin check-x-net-pin check-x-crypto-pin fmt-check vet cover-check security docker-scan ## Release gate: all quality checks
 
 release: ## Release via GoReleaser (main branch only)
 	@if [ "$(BRANCH)" != "main" ]; then echo "FAIL: releases from main only"; exit 1; fi
