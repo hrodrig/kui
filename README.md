@@ -1,11 +1,12 @@
 ![kui](assets/kui-hero-full.png)
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/hrodrig/kui/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/hrodrig/kui/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/kui)](https://github.com/hrodrig/kui/releases)
 [![CI](https://github.com/hrodrig/kui/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/kui/actions)
 [![Security](https://github.com/hrodrig/kui/actions/workflows/security.yml/badge.svg)](https://github.com/hrodrig/kui/actions/workflows/security.yml)
 [![CodeQL](https://github.com/hrodrig/kui/actions/workflows/codeql.yml/badge.svg)](https://github.com/hrodrig/kui/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/hrodrig/kui/graph/badge.svg)](https://codecov.io/gh/hrodrig/kui)
+[![gghstats clones](https://gghstats.hermesrodriguez.com/api/v1/badge/hrodrig/kui?metric=clones)](https://gghstats.hermesrodriguez.com/hrodrig/kui)
 [![Go 1.26.4](https://img.shields.io/badge/go-1.26.4-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![pkg.go.dev](https://pkg.go.dev/badge/github.com/hrodrig/kui)](https://pkg.go.dev/github.com/hrodrig/kui)
