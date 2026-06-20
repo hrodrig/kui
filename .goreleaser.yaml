@@ -1,0 +1,82 @@
+version: 2
+
+project_name: kui
+
+before:
+  hooks:
+    # Do not run go mod tidy here — it drops the explicit golang.org/x/net pin (see Makefile check-x-net-pin).
+    - make check-x-net-pin
+    - make check-x-crypto-pin
+    - go install github.com/a-h/templ/cmd/templ@v0.3.977
+    - templ generate
+    - go vet ./...
+
+builds:
+  - id: kui
+    main: ./cmd/kui
+    binary: kui
+    ldflags:
+      - -s -w
+      - -X github.com/hrodrig/kui/internal/version.Version={{ .Version }}
+      - -X github.com/hrodrig/kui/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/hrodrig/kui/internal/version.BuildDate={{ .Date }}
+      - -X github.com/hrodrig/kui/internal/version.Branch={{ .Branch }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+      - freebsd
+      - openbsd
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: kui
+    formats: ["tar.gz"]
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - configs/kui.yml.sample
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+
+dockers_v2:
+  - dockerfile: Dockerfile.release
+    ids:
+      - kui
+    images:
+      - ghcr.io/hrodrig/kui
+    tags:
+      - "v{{ .Version }}"
+      - "{{ if not .IsSnapshot }}latest{{ end }}"
+    labels:
+      org.opencontainers.image.title: "kui"
+      org.opencontainers.image.description: "Analytics dashboard for kiko"
+      org.opencontainers.image.source: "https://github.com/hrodrig/kui"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .Date }}"

@@ -1,0 +1,34 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.4"
+      - name: Install templ
+        run: go install github.com/a-h/templ/cmd/templ@v0.3.977
+      - run: make govulncheck
+
+  grype:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: make docker-build
+      - uses: anchore/scan-action@v6
+        with:
+          image: kui:local
+          fail-build: true
+          severity-cutoff: high

@@ -1,0 +1,25 @@
+# kui — configuration
+# See: https://github.com/hrodrig/kui
+
+listen: ":3000"
+log_level: info
+
+database:
+  path: ./data/kui.db
+
+kiko:
+  url: http://127.0.0.1:8080
+  api_key: ""
+
+session:
+  cookie_name: kui_session
+  ttl_hours: 168
+  short_ttl_hours: 8
+  secure: false
+
+default_locale: en
+# enabled_locales: en,es,fr,de,pt-br
+
+admin:
+  email: admin@localhost
+  password: ""
