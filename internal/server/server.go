@@ -66,6 +66,8 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) routes() {
+	s.mux.HandleFunc("GET /api/v1/healthz", s.getHealthz)
+	s.mux.HandleFunc("GET /api/v1/readyz", s.getReadyz)
 	s.mux.HandleFunc("GET "+VersionPath, s.getVersion)
 	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(s.static))))
 	s.mux.HandleFunc("GET /login", s.getLogin)

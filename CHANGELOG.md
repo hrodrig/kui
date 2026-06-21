@@ -4,7 +4,12 @@ All notable changes to **kui** are documented here.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.3.1] - 2026-06-20
+
+### Added
+
+- **Health endpoints** — `GET /api/v1/healthz` (liveness) and
+  `GET /api/v1/readyz` (readiness with DB ping) for Kubernetes probes.
 
 ## [0.3.0] - 2026-06-20
 
