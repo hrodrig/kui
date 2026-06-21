@@ -1,6 +1,6 @@
 ![kui](assets/kui-hero-full.png)
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/hrodrig/kui/releases)
+[![Version](https://img.shields.io/badge/version-0.3.1-blue)](https://github.com/hrodrig/kui/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/kui)](https://github.com/hrodrig/kui/releases)
 [![CI](https://github.com/hrodrig/kui/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/kui/actions)
 [![Security](https://github.com/hrodrig/kui/actions/workflows/security.yml/badge.svg)](https://github.com/hrodrig/kui/actions/workflows/security.yml)
