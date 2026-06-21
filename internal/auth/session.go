@@ -202,6 +202,7 @@ func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.secure,
 		MaxAge:   -1,
 	})
 }
