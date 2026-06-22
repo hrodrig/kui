@@ -37,10 +37,12 @@ func newRootCmd() *cobra.Command {
 		Use:   "serve",
 		Short: "Start the web UI",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return serveCmd(cfgFile)
+			logLevel, _ := cmd.Flags().GetString("log-level")
+			return serveCmd(cfgFile, logLevel)
 		},
 	}
 	serve.Flags().String("listen", "", "HTTP listen address (overrides config)")
+	serve.Flags().String("log-level", "", "Log level (trace, debug, info, warn, error, fatal, off)")
 	root.AddCommand(serve)
 
 	versionCmd := &cobra.Command{
@@ -55,8 +57,8 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
-func serveCmd(cfgFile string) error {
-	cfg, err := config.Load(cfgFile)
+func serveCmd(cfgFile, logLevel string) error {
+	cfg, err := config.Load(cfgFile, logLevel)
 	if err != nil {
 		return err
 	}

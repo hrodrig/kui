@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hrodrig/kui/internal/log"
@@ -41,9 +43,8 @@ type AdminCfg struct {
 	Password string `mapstructure:"password"`
 }
 
-func Load(path string) (*Config, error) {
+func Load(path string, logLevel ...string) (*Config, error) {
 	v := viper.New()
-	v.SetConfigType("yaml")
 	v.SetDefault("listen", ":3000")
 	v.SetDefault("log_level", "info")
 	v.SetDefault("database.path", "./data/kui.db")
@@ -56,16 +57,29 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("default_locale", "en")
 
 	bindEnv(v)
+	used := "<none>"
 	if path != "" {
 		v.SetConfigFile(path)
+		v.SetConfigType("yaml")
+		used = path
 		if err := v.ReadInConfig(); err != nil {
 			return nil, fmt.Errorf("read config: %w", err)
 		}
 	} else {
 		v.SetConfigName("kui")
 		v.AddConfigPath(".")
-		v.AddConfigPath("./configs")
-		_ = v.ReadInConfig()
+		if home, err := os.UserHomeDir(); err == nil {
+			v.AddConfigPath(filepath.Join(home, ".kui"))
+		}
+		v.AddConfigPath("/etc/kui/")
+
+		if err := v.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+				return nil, fmt.Errorf("read config: %w", err)
+			}
+		} else {
+			used = v.ConfigFileUsed()
+		}
 	}
 
 	var cfg Config
@@ -80,7 +94,18 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(logLevel) > 0 && logLevel[0] != "" {
+		level, err = log.ParseLevel(logLevel[0])
+		if err != nil {
+			return nil, fmt.Errorf("config: --log-level: %w", err)
+		}
+	}
 	cfg.Log = log.New(nil, level)
+
+	cfg.Log.Info("Using config file: %s", used)
+	cfg.Log.Info("Log level set to: %s", cfg.Log.LevelName())
+	cfg.Log.Info("database path: %s", cfg.Database.Path)
+
 	return &cfg, nil
 }
 
