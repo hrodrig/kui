@@ -29,7 +29,7 @@ hit() {
 	referrer="$4"
 	title="$5"
 	width="$6"
-	curl -fsS -o /dev/null -X POST "$KIKO_URL/hit" \
+	curl -fsS -o /dev/null -X POST "$KIKO_URL/api" \
 		-H "Content-Type: application/json" \
 		-H "User-Agent: $ua" \
 		-d "{\"host\":\"$host\",\"path\":\"$path\",\"referrer\":\"$referrer\",\"title\":\"$title\",\"width\":$width}"
