@@ -4,6 +4,23 @@ All notable changes to **kui** are documented here.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.2] - 2026-06-21
+
+### Added
+
+- **Log format** — each line now includes `- kui -` before level for multi-service log
+  federation (`2026-06-22T01:40:25Z  - kui - INFO  ...`).
+- **Config search path** — `./kui.yml` → `~/.kui/kui.yml` → `/etc/kui/kui.yml`;
+  startup logs `Using config file: <path>` or `Using config file: none, default settings`.
+- **Log level flag** — `--log-level` CLI flag and `KUI_LOG_LEVEL` env var
+  (trace, debug, info, warn, error, fatal, off).
+- **Log level banner** — `Debug level set to: DEBUG` on startup.
+- **Database path logged** — shows `database path: ./data/kui.db` on startup.
+
+### Changed
+
+- Config search path: removed `./configs/`, now follows same pattern as kiko.
+
 ## [0.3.1] - 2026-06-20
 
 ### Added

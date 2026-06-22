@@ -56,7 +56,7 @@ func TestExecuteServeHelp(t *testing.T) {
 }
 
 func TestServeCmdMissingConfig(t *testing.T) {
-	err := serveCmd("/nonexistent/config.yml")
+	err := serveCmd("/nonexistent/config.yml", "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -67,7 +67,7 @@ func TestServeCmdBadDBPath(t *testing.T) {
 	cfgPath := filepath.Join(dir, "kui.yml")
 	os.WriteFile(cfgPath, []byte("database:\n  path: /nonexistent/dir/kui.db\n"), 0644)
 
-	err := serveCmd(cfgPath)
+	err := serveCmd(cfgPath, "")
 	if err == nil {
 		t.Fatal("expected error from bad db path")
 	}
