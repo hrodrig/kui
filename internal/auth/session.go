@@ -132,6 +132,7 @@ func (s *Service) ClearPendingCookie(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   s.secure,
 		MaxAge:   -1,
 	})
 }
